@@ -569,7 +569,10 @@ async def health_check():
                                    "api_key_configured": bool(settings.youtube_api_key), "status": youtube_search_status_detail}
     }
 
+
+
 if __name__ == "__main__":
     import uvicorn
-    logger.info(f"Starting Uvicorn server for SmartGenie API...")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))  # Get port from environment
+    logger.info(f"Starting Uvicorn server for SmartGenie API on port {port}...")
+    uvicorn.run(app, host="0.0.0.0", port=port)
