@@ -1,0 +1,7 @@
+fastapi==0.109.1
+uvicorn==0.27.0
+langchain==0.1.11
+langchain-groq==0.1.1  # The correct package for Groq integration
+python-dotenv==1.0.0
+requests==2.31.0
+wikipedia==1.4.0
