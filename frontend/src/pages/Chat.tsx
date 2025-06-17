@@ -20,6 +20,7 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isPremiumPopupOpen, setIsPremiumPopupOpen] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [recentChats, setRecentChats] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -233,7 +234,7 @@ const Chat = () => {
   const fetchAIResponse = async (question) => {
     try {
       // Send request to backend API
-      const response = await fetch('/api/ask', {
+      const response = await fetch('https://smartgenei.onrender.com/ask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -281,15 +282,16 @@ const Chat = () => {
     if (!inputMessage.trim() || isLoading) return;
 
     // Check if user can send message
-    if (!canSendMessage()) {
-      navigate('/premium');
+    // Check if message limit is reached (3/3)
+    if (!canSendMessage() || usage?.messages_used >= 3) {
+      setIsPremiumPopupOpen(true);
       return;
     }
 
     // Increment message count
     const canProceed = await incrementMessageCount();
     if (!canProceed) {
-      navigate('/premium');
+      setIsPremiumPopupOpen(true);
       return;
     }
 
@@ -534,16 +536,25 @@ const Chat = () => {
             <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">AI Search Assistant</h2>
           </div>
           <div className="flex items-center space-x-3 relative">
-            <button className="px-4 py-2 text-sm bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white rounded-full hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 hover:scale-105 font-semibold">
-              <Crown className="h-4 w-4 mr-2 inline" />
-              Pro
-            </button>
-            <button 
-              className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-violet-600 flex items-center justify-center text-white font-bold shadow-lg hover:shadow-purple-500/30 hover:scale-110 transition-all duration-300"
-              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-            >
-              {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-            </button>
+            <Link to="/premium">
+              <button className="px-4 py-2 text-sm bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white rounded-full hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 hover:scale-105 font-semibold">
+                <Crown className="h-4 w-4 mr-2 inline" />
+                Pro
+              </button>
+            </Link>
+            <div className="relative">
+              <button 
+                className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-violet-600 flex items-center justify-center font-bold shadow-lg hover:shadow-purple-500/30 hover:scale-110 transition-all duration-300 text-white"
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              >
+                {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+              </button>
+              {!usage?.is_premium && (
+                <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  {usage?.messages_used || 0}
+                </div>
+              )}
+            </div>
             
             {/* Profile Dropdown - Fixed positioning and z-index */}
             {isProfileDropdownOpen && (
@@ -696,6 +707,145 @@ const Chat = () => {
           className="fixed inset-0 bg-purple-900/20 backdrop-blur-sm z-35 lg:hidden transition-all duration-300"
           onClick={() => setIsMenuOpen(false)}
         />
+      )}
+      
+      {/* Premium Popup */}
+      {isPremiumPopupOpen && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+            onClick={() => setIsPremiumPopupOpen(false)}
+          />
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden">
+              <div className="p-4 bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white">
+                <h2 className="text-xl font-bold mb-2">Upgrade to Premium</h2>
+                <p className="text-white/80 text-sm">You've reached your free message limit. Upgrade to continue chatting with unlimited messages and additional features.</p>
+              </div>
+              <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 perspective-1000">
+                {/* Basic Plan */}
+                <div className="group flex flex-col items-start max-w-xs rounded-3xl border border-gray-300/30 bg-gradient-to-br from-gray-100/20 to-slate-200/20 backdrop-blur-xl p-4 text-gray-900 transition-all duration-500 hover:scale-105 hover:-translate-y-4 transform-gpu shadow-2xl shadow-gray-500/20 hover:shadow-gray-500/40 hover:rotate-y-12 relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-gray-100/30 to-slate-200/20 backdrop-blur-xl"></div>
+                  <div className="relative z-10 w-full">
+                    <div className="text-center p-0 mb-6 w-full">
+                      <h3 className="text-md font-normal text-gray-800 drop-shadow-sm font-semibold">Basic</h3>
+                      <div className="my-6 flex items-baseline justify-center">
+                        <span className="mr-2 text-4xl font-extrabold text-gray-900 drop-shadow-md">Free</span>
+                      </div>
+                      <p className="font-light text-gray-600 text-xs">Limited to 3 messages</p>
+                    </div>
+                    <Link to="/premium" className="block mt-4 w-full">
+                      <button className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-lg p-2 text-xs font-semibold shadow-lg shadow-gray-500/30 hover:shadow-gray-500/50 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/20">
+                        Upgrade Now
+                      </button>
+                    </Link>
+                    <div className="p-0 mt-6 space-y-2 text-left text-gray-700 text-xs">
+                      <ul className="space-y-2">
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>3 Messages</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>Basic Response</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>Basic Analytics</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                {/* Pro Plan */}
+                <div className="group flex flex-col items-start max-w-xs rounded-3xl border border-green-300/30 bg-gradient-to-br from-emerald-400/20 to-green-500/20 backdrop-blur-xl p-4 text-gray-900 transition-all duration-500 hover:scale-110 hover:-translate-y-6 transform-gpu shadow-2xl shadow-green-600/30 hover:shadow-green-600/60 hover:rotate-y-12 relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-400/30 to-green-500/20 backdrop-blur-xl"></div>
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-green-400/30 to-emerald-400/20 rounded-full blur-2xl"></div>
+                  <div className="relative z-10 w-full">
+                    <div className="text-center p-0 mb-6 w-full">
+                      <h3 className="text-md font-normal text-gray-900 drop-shadow-sm font-semibold">Pro</h3>
+                      <div className="my-6 flex items-baseline justify-center">
+                        <span className="mr-2 text-4xl font-extrabold text-gray-900 drop-shadow-md">₹300</span>
+                        <span className="text-gray-800 text-sm">/month</span>
+                      </div>
+                      <p className="font-light text-gray-700 text-xs">Balanced features for regular users</p>
+                    </div>
+                    <Link to="/premium" className="block mt-4 w-full">
+                      <button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg p-2 text-xs font-semibold shadow-lg shadow-green-500/40 hover:shadow-green-500/60 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30">
+                        Upgrade Now
+                      </button>
+                    </Link>
+                    <div className="p-0 mt-6 space-y-2 text-left text-gray-800 text-xs">
+                      <ul className="space-y-2">
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>Unlimited Messages</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>Faster Response Time</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>Advanced Analytics</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>File Uploads</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                {/* Enterprise Plan */}
+                <div className="group flex flex-col items-start max-w-xs rounded-3xl border border-purple-400/40 bg-gradient-to-br from-purple-500/20 to-indigo-600/20 backdrop-blur-xl p-4 text-gray-900 transition-all duration-500 hover:scale-110 hover:-translate-y-6 transform-gpu shadow-2xl shadow-purple-700/40 hover:shadow-purple-700/70 hover:rotate-y-12 relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/30 to-indigo-600/20 backdrop-blur-xl"></div>
+                  <div className="absolute top-0 left-0 w-16 h-16 bg-gradient-to-br from-purple-600/40 to-indigo-600/30 rounded-full blur-xl"></div>
+                  <div className="absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-br from-indigo-500/30 to-purple-600/20 rounded-full blur-2xl"></div>
+                  <div className="relative z-10 w-full">
+                    <div className="text-center p-0 mb-6 w-full">
+                      <h3 className="text-md font-normal text-gray-900 drop-shadow-sm font-semibold">Enterprise</h3>
+                      <div className="my-6 flex items-baseline justify-center">
+                        <span className="text-4xl font-extrabold text-gray-900 drop-shadow-md">Custom</span>
+                      </div>
+                      <p className="font-light text-gray-700 text-xs">Tailored solutions for businesses</p>
+                    </div>
+                    <Link to="/premium" className="block mt-4 w-full">
+                      <button className="w-full bg-gradient-to-r from-purple-700 to-indigo-700 text-white rounded-lg p-2 text-xs font-semibold shadow-lg shadow-purple-600/50 hover:shadow-purple-600/70 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30">
+                        Contact Us
+                      </button>
+                    </Link>
+                    <div className="p-0 mt-6 space-y-2 text-left text-gray-800 text-xs">
+                      <ul className="space-y-2">
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>Unlimited Everything</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>Dedicated Support</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>Custom Features</span>
+                        </li>
+                        <li className="flex items-center space-x-2">
+                          <span className="h-4 w-4 flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full p-0.5 text-white shadow-md">✓</span>
+                          <span>SLA Guarantee</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 bg-gray-50 flex justify-end border-t border-gray-200">
+                <button onClick={() => setIsPremiumPopupOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

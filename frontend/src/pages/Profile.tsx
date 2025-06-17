@@ -82,7 +82,7 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 relative overflow-hidden">
       {/* Parallax background elements */}
       <div 
         className="gradient-blob bg-blue-400" 
@@ -309,9 +309,11 @@ const Profile = () => {
                           </p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
+                      <Link to={`/chat/${chat.id}`}>
+                        <Button variant="ghost" size="sm">
+                          View
+                        </Button>
+                      </Link>
                     </div>
                   ))}
                 </div>
@@ -346,7 +348,9 @@ const Profile = () => {
                       <p className="font-medium">Data Export</p>
                       <p className="text-sm text-gray-600">Download your chat history and data</p>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={async () => {
+                      alert('Data export functionality will be implemented soon.');
+                    }}>
                       Export
                     </Button>
                   </div>
@@ -355,7 +359,11 @@ const Profile = () => {
                       <p className="font-medium text-red-600">Delete Account</p>
                       <p className="text-sm text-gray-600">Permanently delete your account and data</p>
                     </div>
-                    <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50">
+                    <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50" onClick={async () => {
+                      if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                        alert('Account deletion functionality will be implemented soon.');
+                      }
+                    }}>
                       Delete
                     </Button>
                   </div>

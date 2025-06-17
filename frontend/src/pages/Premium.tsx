@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useParallax } from "@/hooks/useParallax";
 import { useUserUsage } from "@/hooks/useUserUsage";
 import "@/styles/parallax.css";
+import "@/styles/landing.css";
 
 const Premium = () => {
   const [mounted, setMounted] = useState(false);
@@ -27,7 +28,7 @@ const Premium = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 relative overflow-hidden">
       {/* Parallax background elements */}
       <div 
         className="gradient-blob bg-blue-400" 
@@ -87,104 +88,130 @@ const Premium = () => {
             )}
           </div>
 
-          {/* Premium Features with Parallax effect on items */}
-          <div className="grid md:grid-cols-2 gap-8 mb-12">
-            <div>
-              <h2 className="text-2xl font-bold mb-6">Premium Features</h2>
-              <div className="space-y-4">
-                {[
-                  { icon: <MessageCircle className="h-6 w-6 text-blue-600 mt-1" />, title: "Unlimited Messages", desc: "Chat as much as you want, no daily limits" },
-                  { icon: <Zap className="h-6 w-6 text-purple-600 mt-1" />, title: "Advanced AI Responses", desc: "Get more detailed and intelligent answers" },
-                  { icon: <Upload className="h-6 w-6 text-green-600 mt-1" />, title: "File Uploads", desc: "Upload documents, images, and more" },
-                  { icon: <History className="h-6 w-6 text-orange-600 mt-1" />, title: "Chat History", desc: "Access all your previous conversations" },
-                  { icon: <HeadphonesIcon className="h-6 w-6 text-red-600 mt-1" />, title: "Priority Support", desc: "Get help when you need it most" }
-                ].map((feature, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-start space-x-3"
-                    style={{ 
-                      transform: mounted ? `translateY(${Math.sin((index * 0.8) + (window.scrollY * 0.003)) * 8}px)` : 'none',
-                      transition: 'transform 0.5s ease-out'
-                    }}
-                  >
-                    {feature.icon}
-                    <div>
-                      <h3 className="font-semibold">{feature.title}</h3>
-                      <p className="text-gray-600">{feature.desc}</p>
+          {/* Enhanced 3D Pricing Cards with Glassy Effect */}
+          <div className="mb-12" style={cardParallax}>
+            <div className="grid md:grid-cols-3 gap-10 max-w-screen-xl mx-auto perspective-1000">
+              {/* Basic Plan */}
+              <Card className="group flex flex-col items-start max-w-lg rounded-3xl border border-gray-300/30 bg-gradient-to-br from-gray-100/20 to-slate-200/20 backdrop-blur-xl p-6 xl:p-8 text-gray-900 transition-all duration-500 hover:scale-105 hover:-translate-y-4 transform-gpu shadow-2xl shadow-gray-500/20 hover:shadow-gray-500/40 hover:rotate-y-12">
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-gray-100/30 to-slate-200/20 backdrop-blur-xl"></div>
+                <div className="relative z-10 w-full">
+                  <CardHeader className="text-center p-0 mb-8 w-full">
+                    <CardTitle className="text-lg font-normal text-gray-800 drop-shadow-sm font-semibold">Basic</CardTitle>
+                    <div className="my-8 flex items-baseline justify-center">
+                      <span className="mr-2 text-5xl font-extrabold text-gray-900 drop-shadow-md">Free</span>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Pricing Card with Parallax */}
-            <div style={cardParallax}>
-              <Card className="border-2 border-purple-600 relative parallax-card">
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-medium">
-                    Best Value
-                  </span>
+                    <CardDescription className="font-light text-gray-600 text-sm">
+                      Limited to 3 messages
+                    </CardDescription>
+                  </CardHeader>
+                  <Link to="/auth" className="block mt-6 w-full">
+                    <Button className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-xl p-3 text-sm font-semibold shadow-lg shadow-gray-500/30 hover:shadow-gray-500/50 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/20">
+                      Get Started
+                    </Button>
+                  </Link>
+                  <CardContent className="p-0 mt-8 space-y-4 text-left text-gray-700 text-sm">
+                    <ul className="space-y-4">
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full p-0.5 text-white shadow-md" />
+                        <span>3 Messages</span>
+                      </li>
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full p-0.5 text-white shadow-md" />
+                        <span>Basic Response</span>
+                      </li>
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full p-0.5 text-white shadow-md" />
+                        <span>Basic Analytics</span>
+                      </li>
+                    </ul>
+                  </CardContent>
                 </div>
-                <CardHeader className="text-center">
-                  <Crown className="h-12 w-12 mx-auto text-yellow-600 mb-4" />
-                  <CardTitle className="text-3xl">Premium Plan</CardTitle>
-                  <div className="text-4xl font-bold mb-2">
-                    $9.99<span className="text-lg text-gray-600">/month</span>
-                  </div>
-                  <CardDescription>Everything you need for unlimited AI assistance</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center">
-                      <Check className="h-5 w-5 text-green-600 mr-3" />
-                      <span>Unlimited messages</span>
+              </Card>
+
+              {/* Pro Plan */}
+              <Card className="group flex flex-col items-start max-w-lg rounded-3xl border border-green-300/30 bg-gradient-to-br from-emerald-400/20 to-green-500/20 backdrop-blur-xl p-6 xl:p-8 text-gray-900 transition-all duration-500 hover:scale-110 hover:-translate-y-6 transform-gpu shadow-2xl shadow-green-600/30 hover:shadow-green-600/60 hover:rotate-y-12 relative overflow-hidden">
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-400/30 to-green-500/20 backdrop-blur-xl"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/30 to-emerald-400/20 rounded-full blur-2xl"></div>
+                <div className="relative z-10 w-full">
+                  <CardHeader className="text-center p-0 mb-8 w-full">
+                    <CardTitle className="text-lg font-normal text-gray-900 drop-shadow-sm font-semibold">Pro</CardTitle>
+                    <div className="my-8 flex items-baseline justify-center">
+                      <span className="mr-2 text-5xl font-extrabold text-gray-900 drop-shadow-md">₹300</span>
+                      <span className="text-gray-800">/month</span>
                     </div>
-                    <div className="flex items-center">
-                      <Check className="h-5 w-5 text-green-600 mr-3" />
-                      <span>Advanced AI responses</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Check className="h-5 w-5 text-green-600 mr-3" />
-                      <span>File upload support</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Check className="h-5 w-5 text-green-600 mr-3" />
-                      <span>Full chat history</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Check className="h-5 w-5 text-green-600 mr-3" />
-                      <span>Priority customer support</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Check className="h-5 w-5 text-green-600 mr-3" />
-                      <span>Cancel anytime</span>
-                    </div>
-                  </div>
-                  
-                  {!usage?.is_premium ? (
-                    <Button 
-                      onClick={handleUpgrade}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                      size="lg"
-                    >
-                      <Crown className="h-5 w-5 mr-2" />
-                      Upgrade to Premium
+                    <CardDescription className="font-light text-gray-700 text-sm">
+                      Balanced features for regular users
+                    </CardDescription>
+                  </CardHeader>
+                  <Link to="/auth" className="block mt-6 w-full">
+                    <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl p-3 text-sm font-semibold shadow-lg shadow-green-500/40 hover:shadow-green-500/60 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30">
+                      Get Started
                     </Button>
-                  ) : (
-                    <Button 
-                      disabled
-                      className="w-full bg-green-600"
-                      size="lg"
-                    >
-                      <Check className="h-5 w-5 mr-2" />
-                      Already on Premium
+                  </Link>
+                  <CardContent className="p-0 mt-8 space-y-4 text-left text-gray-800 text-sm">
+                    <ul className="space-y-4">
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full p-0.5 text-white shadow-md" />
+                        <span>Unlimited Messages</span>
+                      </li>
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full p-0.5 text-white shadow-md" />
+                        <span>Faster Response Time</span>
+                      </li>
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full p-0.5 text-white shadow-md" />
+                        <span>Advanced Analytics</span>
+                      </li>
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full p-0.5 text-white shadow-md" />
+                        <span>File Uploads</span>
+                      </li>
+                    </ul>
+                  </CardContent>
+                </div>
+              </Card>
+
+              {/* Enterprise Plan */}
+              <Card className="group flex flex-col items-start max-w-lg rounded-3xl border border-purple-400/40 bg-gradient-to-br from-purple-500/20 to-indigo-600/20 backdrop-blur-xl p-6 xl:p-8 text-gray-900 transition-all duration-500 hover:scale-110 hover:-translate-y-6 transform-gpu shadow-2xl shadow-purple-700/40 hover:shadow-purple-700/70 hover:rotate-y-12 relative overflow-hidden">
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/30 to-indigo-600/20 backdrop-blur-xl"></div>
+                <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-purple-600/40 to-indigo-600/30 rounded-full blur-xl"></div>
+                <div className="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-500/30 to-purple-600/20 rounded-full blur-2xl"></div>
+                <div className="relative z-10 w-full">
+                  <CardHeader className="text-center p-0 mb-8 w-full">
+                    <CardTitle className="text-lg font-normal text-gray-900 drop-shadow-sm font-semibold">Enterprise</CardTitle>
+                    <div className="my-8 flex items-baseline justify-center">
+                      <span className="mr-2 text-5xl font-extrabold text-gray-900 drop-shadow-md">Custom</span>
+                    </div>
+                    <CardDescription className="font-light text-gray-700 text-sm">
+                      Tailored solutions for businesses
+                    </CardDescription>
+                  </CardHeader>
+                  <Link to="/auth" className="block mt-6 w-full">
+                    <Button className="w-full bg-gradient-to-r from-purple-700 to-indigo-700 text-white rounded-xl p-3 text-sm font-semibold shadow-lg shadow-purple-600/50 hover:shadow-purple-600/70 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30">
+                      Contact Us
                     </Button>
-                  )}
-                  
-                  <p className="text-center text-sm text-gray-500">
-                    Secure payment • Cancel anytime • 30-day money back guarantee
-                  </p>
-                </CardContent>
+                  </Link>
+                  <CardContent className="p-0 mt-8 space-y-4 text-left text-gray-800 text-sm">
+                    <ul className="space-y-4">
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full p-0.5 text-white shadow-md" />
+                        <span>Unlimited Everything</span>
+                      </li>
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full p-0.5 text-white shadow-md" />
+                        <span>Dedicated Support</span>
+                      </li>
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full p-0.5 text-white shadow-md" />
+                        <span>Custom Features</span>
+                      </li>
+                      <li className="flex items-center space-x-3">
+                        <Check className="h-5 w-5 flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full p-0.5 text-white shadow-md" />
+                        <span>SLA Guarantee</span>
+                      </li>
+                    </ul>
+                  </CardContent>
+                </div>
               </Card>
             </div>
           </div>
