@@ -53,7 +53,7 @@ const Auth = () => {
           email: formData.email,
           password: formData.password,
           options: {
-            emailRedirectTo: `https://smart-genei.vercel.app/`,
+            emailRedirectTo: `https://smart-genei.vercel.app/chat`,
             data: {
               full_name: formData.name,
             }
@@ -100,10 +100,15 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     try {
+      // Get the current origin and construct the redirect URL
+      const redirectTo = window.location.origin === 'http://localhost:3000' 
+        ? `https://smart-genei.vercel.app/chat`
+        : `${window.location.origin}/chat`;
+        
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `https://smart-genei.vercel.app/chat`
+          redirectTo: redirectTo
         }
       });
 
