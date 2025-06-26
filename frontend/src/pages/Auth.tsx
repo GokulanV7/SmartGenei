@@ -53,7 +53,7 @@ const Auth = () => {
           email: formData.email,
           password: formData.password,
           options: {
-            emailRedirectTo: `https://smartgenei.onrender.com/`,
+            emailRedirectTo: `https://smart-genei.vercel.app/`,
             data: {
               full_name: formData.name,
             }
