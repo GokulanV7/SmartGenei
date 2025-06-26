@@ -53,7 +53,7 @@ const Auth = () => {
           email: formData.email,
           password: formData.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `https://smartgenei.onrender.com/`,
             data: {
               full_name: formData.name,
             }
@@ -103,7 +103,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `https://smartgenei.onrender.com/chat`
+          redirectTo: `https://smart-genei.vercel.app/chat`
         }
       });
 
