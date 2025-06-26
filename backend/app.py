@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     max_response_words: int = Field(200, env="MAX_RESPONSE_WORDS") # Base for direct, smaller
     enable_web_search: bool = Field(True, env="ENABLE_WEB_SEARCH")
     enable_youtube_search: bool = Field(True, env="ENABLE_YOUTUBE_SEARCH")
-    max_search_results_chars: int = Field(3000, env="MAX_SEARCH_RESULTS_CHARS") # Increased slightly
+    max_search_results_chars: int = Field(3500, env="MAX_SEARCH_RESULTS_CHARS") # Increased slightly
     max_youtube_results: int = Field(3, env="MAX_YOUTUBE_RESULTS")
 
     class Config:
@@ -133,7 +133,7 @@ Follow these rules VERY STRICTLY:
 6.  Keep it casual and conversational, like you're sharing interesting findings with a friend.
 7.  Do not say "based on the search results" or "the search results indicate." Integrate the information naturally.
 8.  If there are YouTube videos in the "Search Results," casually mention them. For example: "It looks like there was an exciting match recently! There's a video from [Channel] titled '[Video Title]' that covers..." and then briefly explain what the video discusses based on its title or description in the search results.
-9.  If you see Wikipedia articles, news sites, or other web links, you can mention the general topics they cover if relevant. For example: "For more background, sites like [Site Name] or Wikipedia have more details on [Topic]."
+9.  If you see Wikipedia articles, news sites, or other web links in the "Search Results" (not just their URLs, but actual text snippets from them), you can mention the general topics they cover if relevant. For example: "For more background, sites like [Site Name] or Wikipedia seem to have more details on [Topic]."
 10. Combine information from different search snippets if they cover the same event or topic to create a more complete picture.
 11. Focus on directly addressing the user's "Question" using the provided "Search Results."
 
@@ -159,7 +159,7 @@ Follow these rules:
 5.  Provide detailed, comprehensive answers (around {max_words_reconciled} words) that are friendly, conversational, and informative.
 6.  Do not explicitly say "Based on my initial knowledge..." or "The search results explicitly state...". Integrate the information naturally as if you just found it out.
 7.  Include relevant context, examples, background information, and detailed explanations to make your answer thorough and helpful.
-8.  If you see Wikipedia articles, academic sources, YouTube videos, or educational resources in the search results, casually reference them as great places to learn more.
+8.  If you see Wikipedia articles, academic sources, YouTube videos, or educational resources in the search results (text snippets from them), casually reference them as great places to learn more.
 
 Current date: {current_date}
 Original Question: {question}
@@ -220,7 +220,6 @@ def clean_response(response_text: str, is_from_search: bool = False) -> str:
     if not cleaned: return ANSWER_UNKNOWN
     lower_cleaned = cleaned.lower()
 
-    # Check for "Hmm, I'm not sure..." early
     if "hmm, i'm not sure about that one!" in lower_cleaned or cleaned == ANSWER_UNKNOWN:
         return ANSWER_UNKNOWN
         
@@ -231,9 +230,6 @@ def clean_response(response_text: str, is_from_search: bool = False) -> str:
     for phrase in FORBIDDEN_PHRASES_IN_RESPONSE:
         if phrase in lower_cleaned:
             logger.debug(f"Forbidden phrase '{phrase}' found in response: '{cleaned[:100]}...'")
-            # This might be too aggressive if the LLM is just trying to be polite.
-            # Consider if these should always lead to ANSWER_UNKNOWN or just be cleaned.
-            # For now, keeping it as leading to UNKNOWN to enforce direct answers.
             return ANSWER_UNKNOWN
             
     preambles_to_remove = [
@@ -245,19 +241,18 @@ def clean_response(response_text: str, is_from_search: bool = False) -> str:
             cleaned = cleaned[len(preamble):].lstrip()
             logger.debug(f"Removed preamble '{preamble}' from response: '{cleaned[:100]}...'")
 
-    # Determine the target max words based on whether it was a searched response
     if is_from_search:
-        target_max_words = settings.max_response_words + 150 # Corresponds to max_words_augmented/reconciled
+        target_max_words = settings.max_response_words + 150
         if target_max_words < 300: target_max_words = 300
     else:
         target_max_words = settings.max_response_words
 
-    absolute_max_words_limit = target_max_words * 1.25 # Allow 25% leeway
+    absolute_max_words_limit = target_max_words * 1.25
     words = cleaned.split()
 
     if len(words) > absolute_max_words_limit:
         logger.debug(f"Response too long: '{cleaned[:100]}...' ({len(words)} words, limit ~{int(absolute_max_words_limit)})")
-        sentences = re.split(r'(?<=[.!?])\s+', cleaned) # Split sentences more robustly
+        sentences = re.split(r'(?<=[.!?])\s+', cleaned)
         truncated_response = ""
         word_count = 0
         
@@ -272,16 +267,13 @@ def clean_response(response_text: str, is_from_search: bool = False) -> str:
                 truncated_response += sentence + " "
                 word_count += len(sentence_words)
             else:
-                # If it's the first sentence and it's already too long, we might have an issue
-                # or the sentence is just naturally very long.
                 if i == 0: 
                     truncated_response = " ".join(sentence_words[:int(absolute_max_words_limit)]) + "..."
                     word_count = len(truncated_response.split())
-                break # Stop adding sentences
+                break
         
         cleaned = truncated_response.strip()
-        # Check if the truncated response is substantial enough
-        if word_count >= target_max_words * 0.6: # At least 60% of original target
+        if word_count >= target_max_words * 0.6:
             logger.debug(f"Truncated to: '{cleaned[:100]}...' ({word_count} words)")
             return cleaned
         else:
@@ -310,7 +302,7 @@ def extract_urls_from_search_results(search_results_text: str) -> Dict[str, List
             if not any(blocked_domain in url_cleaned.lower() for blocked_domain in ["duckduckgo.com", "google.com/search", "bing.com/search"]):
                 all_urls.add(url_cleaned)
     
-    logger.debug(f"Extracted {len(all_urls)} unique URLs from search results before categorization.")
+    logger.debug(f"Extracted {len(all_urls)} unique URLs from search results text before categorization.")
     
     for url in all_urls:
         url_lower = url.lower()
@@ -320,15 +312,15 @@ def extract_urls_from_search_results(search_results_text: str) -> Dict[str, List
             categorized_urls['academic'].append(url)
         elif any(domain in url_lower for domain in ['.gov', '.mil', 'who.int', 'un.org', 'unesco.', 'worldbank.', 'imf.org', 'europa.eu']):
             categorized_urls['government'].append(url)
-        elif any(domain in url_lower for domain in ['bbc.', 'cnn.', 'reuters.', 'ap.org', 'npr.', 'news', 'guardian.', 'nytimes.', 'wsj.', 'bloomberg.', 'espn.', 'cricinfo.', 'espncricinfo.']):
+        elif any(domain in url_lower for domain in ['bbc.', 'cnn.', 'reuters.', 'ap.org', 'npr.', 'news', 'guardian.', 'nytimes.', 'wsj.', 'bloomberg.', 'espn.', 'cricinfo.', 'cricbuzz.', 'espncricinfo.']): # Added cricbuzz
             categorized_urls['news'].append(url)
         elif any(domain in url_lower for domain in ['coursera.', 'edx.', 'khanacademy.', 'udemy.', 'skillshare.', 'pluralsight.', 'lynda.', 'masterclass.']):
             categorized_urls['educational'].append(url)
         else:
             categorized_urls['general'].append(url)
             
-    result = {k: v for k, v in categorized_urls.items() if v}
-    logger.debug(f"Categorized URLs: {[(k, len(v)) for k, v in result.items()]}")
+    result = {k: list(set(v)) for k, v in categorized_urls.items() if v} # Ensure unique URLs per category
+    logger.debug(f"Categorized URLs from text: {[(k, len(v)) for k, v in result.items()]}")
     return result
 
 def get_legacy_urls_list(categorized_urls: Dict[str, List[str]]) -> List[str]:
@@ -392,141 +384,149 @@ async def search_youtube(query: str) -> tuple[List[YouTubeVideo], str]:
     return youtube_videos_data, youtube_context_text.strip()
 
 async def perform_enhanced_web_search(query: str) -> tuple[str, Dict[str, List[str]]]:
-    search_results_context = ""
-    categorized_urls: Dict[str, List[str]] = {}
-    
-    if ddg_search:
+    web_search_text_context = ""
+    # categorized_urls will store ALL web URLs found, from DDG and suggestions
+    all_categorized_web_urls: Dict[str, List[str]] = {}
+    ddg_context_added = False
+    new_suggestions_added_to_context = False # Tracks if suggested URL text was added
+
+    if ddg_search and settings.enable_web_search:
         try:
             logger.info(f"Attempting DuckDuckGo search for: '{query}'")
-            ddg_result_text = await ddg_search.arun(query)
-            logger.info(f"DDG result length: {len(ddg_result_text) if ddg_result_text else 0}")
+            ddg_result_text_content = await ddg_search.arun(query)
+            logger.info(f"DDG result raw text length: {len(ddg_result_text_content) if ddg_result_text_content else 0}")
             
-            if ddg_result_text and len(ddg_result_text.strip()) > 20:
-                search_results_context += f"Web Search Results (from DuckDuckGo):\n{ddg_result_text}\n\n"
-                extracted_urls = extract_urls_from_search_results(ddg_result_text)
-                for category, urls in extracted_urls.items():
-                    categorized_urls.setdefault(category, []).extend(urls)
-                logger.info(f"DDG search successful. Found URL categories: {list(categorized_urls.keys())}")
-                # return search_results_context, categorized_urls # Don't return early, allow suggested URLs too
+            if ddg_result_text_content and len(ddg_result_text_content.strip()) > 20:
+                # Add DDG's textual results to the context
+                web_search_text_context += f"Web Search Results (from DuckDuckGo):\n{ddg_result_text_content.strip()}\n\n"
+                ddg_context_added = True
+                
+                # Extract URLs from DDG's textual results and add to all_categorized_web_urls
+                extracted_urls_from_ddg = extract_urls_from_search_results(ddg_result_text_content)
+                for category, urls in extracted_urls_from_ddg.items():
+                    cat_list = all_categorized_web_urls.setdefault(category, [])
+                    for u in urls:
+                        if u not in cat_list:
+                            cat_list.append(u)
+                logger.info(f"DDG search text processed. URLs extracted for categories: {list(extracted_urls_from_ddg.keys())}")
             else:
-                logger.warning(f"DDG search returned insufficient results: {ddg_result_text[:100] if ddg_result_text else 'None'}")
+                logger.warning(f"DDG search returned insufficient textual content: {ddg_result_text_content[:100] if ddg_result_text_content else 'None'}")
         except Exception as e:
             logger.error(f"DDG search failed: {e}", exc_info=True)
-    
-    # Always try to generate suggested URLs, they can supplement DDG or act as fallback
-    logger.info("Attempting to generate suggested URLs.")
-    suggested_urls_map = generate_suggested_urls(query)
-    if suggested_urls_map:
-        temp_suggested_context = f"Suggested Resources for '{query}':\n"
-        has_suggestions = False
-        for category, urls in suggested_urls_map.items():
-            if urls:
-                has_suggestions = True
-                temp_suggested_context += f"\n{category.title()} Sources:\n"
-                # Add to categorized_urls, ensuring uniqueness if DDG already found some
-                current_cat_urls = categorized_urls.setdefault(category, [])
-                for url in urls:
-                    if url not in current_cat_urls:
-                        current_cat_urls.append(url)
-                        temp_suggested_context += f"- {url}\n" # Only add to context if new
-        
-        if has_suggestions: # Only add context if new suggestions were actually added to text
-            if any(len(urls_in_cat) > 0 for cat_name, urls_in_cat in suggested_urls_map.items()): # Check if any actual URLs were added
-                 if not search_results_context.strip().endswith(temp_suggested_context.strip()): # Avoid duplication if context is same
-                    search_results_context += temp_suggested_context + "\n"
-            logger.info(f"Generated/merged {len(categorized_urls)} categories of suggested URLs.")
-        else:
-            logger.info("No new suggested URLs were generated or added to context.")
-            
-    return search_results_context, categorized_urls
+    else:
+        logger.info("DDG search tool not available or web search disabled for DDG part.")
 
-def generate_suggested_urls(query: str) -> Dict[str, List[str]]:
-    query_lower = query.lower()
-    suggested_urls: Dict[str, List[str]] = {}
-    
-    wikipedia_topics = []
-    if any(word in query_lower for word in ['climate', 'environment', 'global warming']):
-        wikipedia_topics = ["https://en.wikipedia.org/wiki/Climate_change", "https://en.wikipedia.org/wiki/Global_warming"]
-    elif any(word in query_lower for word in ['cricket', 'india', 'england', 'test match']):
-        wikipedia_topics = ["https://en.wikipedia.org/wiki/Cricket", "https://en.wikipedia.org/wiki/India_national_cricket_team", "https://en.wikipedia.org/wiki/England_cricket_team"]
-    elif any(word in query_lower for word in ['covid', 'coronavirus', 'pandemic']):
-        wikipedia_topics = ["https://en.wikipedia.org/wiki/COVID-19", "https://en.wikipedia.org/wiki/COVID-19_pandemic"]
-    elif any(word in query_lower for word in ['ai', 'artificial intelligence', 'machine learning']):
-        wikipedia_topics = ["https://en.wikipedia.org/wiki/Artificial_intelligence", "https://en.wikipedia.org/wiki/Machine_learning"]
-    if wikipedia_topics: suggested_urls['wikipedia'] = wikipedia_topics
-    
-    news_sources = []
-    if any(word in query_lower for word in ['cricket', 'sports', 'match', 'india', 'england']):
-        news_sources = ["https://www.espncricinfo.com", "https://www.bbc.com/sport/cricket", "https://www.cricbuzz.com"]
-    elif any(word in query_lower for word in ['climate', 'environment', 'weather']):
-        news_sources = ["https://www.bbc.com/news/science-environment", "https://www.reuters.com/business/environment/"]
-    elif any(word in query_lower for word in ['technology', 'ai', 'tech']):
-        news_sources = ["https://www.bbc.com/news/technology", "https://www.reuters.com/technology/"]
-    if news_sources: suggested_urls['news'] = news_sources
-    
-    educational_sources = []
-    if any(word in query_lower for word in ['learn', 'tutorial', 'course', 'education']):
-        educational_sources = ["https://www.coursera.org", "https://www.khanacademy.org"]
-    if educational_sources: suggested_urls['educational'] = educational_sources
+    if settings.enable_web_search:
+        logger.info("Attempting to generate/merge suggested URLs.")
+        suggested_urls_map = generate_suggested_urls(query) # This returns Dict[str, List[str]]
         
-    gov_sources = []
-    if any(word in query_lower for word in ['climate', 'environment', 'policy']):
-        gov_sources = ["https://www.epa.gov", "https://www.who.int"]
-    if gov_sources: suggested_urls['government'] = gov_sources
-        
-    return suggested_urls
+        if suggested_urls_map:
+            temp_suggested_context_lines = []
+            any_new_suggestion_url_added_to_categorized = False
+
+            for category, urls_in_suggestion in suggested_urls_map.items():
+                if urls_in_suggestion:
+                    # Add these URLs to the main all_categorized_web_urls list
+                    cat_list_in_main_dict = all_categorized_web_urls.setdefault(category, [])
+                    new_urls_for_this_category_for_context_text = []
+
+                    for url in urls_in_suggestion:
+                        if url not in cat_list_in_main_dict:
+                            cat_list_in_main_dict.append(url)
+                            new_urls_for_this_category_for_context_text.append(url)
+                            any_new_suggestion_url_added_to_categorized = True # Mark that at least one new URL was added to the main list
+                    
+                    # If new URLs were identified for context text for this category
+                    if new_urls_for_this_category_for_context_text:
+                        if not temp_suggested_context_lines: # Add main header for suggested resources only once
+                             temp_suggested_context_lines.append(f"Suggested Web Resources for '{query}':")
+                        temp_suggested_context_lines.append(f"\n  {category.title()} Sources:")
+                        for url in new_urls_for_this_category_for_context_text: # Only list the NEW ones in context
+                            temp_suggested_context_lines.append(f"  - {url}")
+                        new_suggestions_added_to_context = True # Mark that text was added to context
+            
+            if new_suggestions_added_to_context: # If any text was actually prepared for suggested URLs
+                web_search_text_context += "\n" + "\n".join(temp_suggested_context_lines) + "\n\n"
+                logger.info("Text for suggested URLs added to context.")
+            
+            if any_new_suggestion_url_added_to_categorized:
+                 logger.info(f"Suggested URLs merged into categorized list. Final web URL categories: {list(all_categorized_web_urls.keys())}")
+            elif not new_suggestions_added_to_context: # No text added and no new URLs added to categorized list
+                 logger.info("No *new* suggested URLs were identified (they might have already been found by DDG or list was empty).")
+        else:
+            logger.info("generate_suggested_urls returned no suggestions map.")
+            
+    if not web_search_text_context.strip() and all_categorized_web_urls and settings.enable_web_search:
+        logger.info("Web search found categorized URLs but no specific text snippets for context (this is okay).")
+    elif not web_search_text_context.strip() and not all_categorized_web_urls and settings.enable_web_search:
+        logger.info("Web search (DDG/Suggested) yielded no text context and no categorized URLs.")
+
+    return web_search_text_context.strip(), all_categorized_web_urls
+
 
 async def perform_search(query: str, include_youtube_flag: bool) -> tuple[str, List[str], Dict[str, List[str]], List[YouTubeVideo]]:
-    search_results_context = ""
+    combined_search_text_context = ""
     queries_used = []
-    categorized_urls: Dict[str, List[str]] = {}
+    final_categorized_web_urls: Dict[str, List[str]] = {}
     youtube_videos_found: List[YouTubeVideo] = []
     
-    if settings.enable_web_search:
-        try:
-            web_context_text, web_urls_map = await perform_enhanced_web_search(query)
-            if web_context_text:
-                search_results_context += web_context_text
-                # Only add web query if context was actually generated
-                if "Web Search Results" in web_context_text or "Suggested Resources" in web_context_text:
-                     queries_used.append(f"Web: {query}")
+    web_search_did_run = False
 
-            if isinstance(web_urls_map, dict):
-                for category, urls in web_urls_map.items():
-                    current_cat_urls = categorized_urls.setdefault(category, [])
-                    for url in urls:
-                        if url not in current_cat_urls:
-                            current_cat_urls.append(url)
-            logger.info(f"Web search completed. Found categories: {list(categorized_urls.keys())}")
+    if settings.enable_web_search:
+        web_search_did_run = True
+        try:
+            web_context_from_enhancer, categorized_urls_from_enhancer = await perform_enhanced_web_search(query)
+            
+            if web_context_from_enhancer.strip():
+                combined_search_text_context += web_context_from_enhancer.strip() + "\n\n"
+            
+            # Merge categorized URLs from enhancer
+            if isinstance(categorized_urls_from_enhancer, dict):
+                for category, urls_in_map in categorized_urls_from_enhancer.items():
+                    cat_list_in_main = final_categorized_web_urls.setdefault(category, [])
+                    for url in urls_in_map:
+                        if url not in cat_list_in_main:
+                            cat_list_in_main.append(url)
+            
+            # Add "Web: query" if web search produced text or categorized URLs
+            if web_context_from_enhancer.strip() or final_categorized_web_urls:
+                if f"Web: {query}" not in queries_used:
+                    queries_used.append(f"Web: {query}")
+                logger.info(f"Web search for '{query}' processed. Text context length: {len(web_context_from_enhancer)}. Categorized URLs: {bool(final_categorized_web_urls)}")
+            else:
+                logger.info(f"Web search for '{query}' yielded no text context and no categorized URLs.")
+
         except Exception as e:
-            logger.error(f"Enhanced web search failed: {e}", exc_info=True)
+            logger.error(f"Error during perform_enhanced_web_search call in perform_search: {e}", exc_info=True)
     else:
         logger.info("Web search is disabled by configuration.")
 
+    youtube_search_did_run = False
     should_run_youtube_search = include_youtube_flag and settings.enable_youtube_search and settings.youtube_api_key
     if should_run_youtube_search:
+        youtube_search_did_run = True
         try:
-            youtube_vids, youtube_ctx = await search_youtube(query)
-            if youtube_ctx: # If any text context from YouTube
-                search_results_context += f"\nCool YouTube Videos Found:\n{youtube_ctx}\n\n"
-                queries_used.append(f"YouTube: {query}")
-            if youtube_vids: # If any video objects
+            youtube_vids, youtube_ctx_text = await search_youtube(query)
+            if youtube_ctx_text.strip():
+                combined_search_text_context += f"Cool YouTube Videos Found:\n{youtube_ctx_text.strip()}\n\n"
+                if f"YouTube: {query}" not in queries_used:
+                    queries_used.append(f"YouTube: {query}")
+            if youtube_vids:
                 youtube_videos_found.extend(youtube_vids)
-            logger.debug(f"YouTube search for '{query}' yielded {len(youtube_videos_found)} videos.")
+            logger.debug(f"YouTube search for '{query}' yielded {len(youtube_videos_found)} videos. Context text length: {len(youtube_ctx_text)}.")
         except Exception as e: 
             logger.error(f"Error during YouTube search integration: {e}", exc_info=True)
-    elif include_youtube_flag and settings.enable_youtube_search and not settings.youtube_api_key: 
-        logger.warning("YouTube search requested and enabled, but YOUTUBE_API_KEY is missing.")
-    elif not include_youtube_flag: 
-        logger.info("YouTube search skipped as per request flag.")
-    elif not settings.enable_youtube_search: 
-        logger.info("YouTube search skipped as it's disabled in configuration.")
+    # ... (other YouTube logging conditions from before)
 
-    if len(search_results_context) > settings.max_search_results_chars:
-        search_results_context = search_results_context[:settings.max_search_results_chars] + "\n... [Search results truncated due to length]"
+    if len(combined_search_text_context) > settings.max_search_results_chars:
+        combined_search_text_context = combined_search_text_context[:settings.max_search_results_chars] + "\n... [Search results truncated due to length]"
         logger.info(f"Combined search results truncated to {settings.max_search_results_chars} characters.")
     
-    return search_results_context.strip(), queries_used, categorized_urls, youtube_videos_found
+    # Ensure flags passed to /ask are accurate
+    # search_was_performed_flag = web_search_did_run or youtube_search_did_run (This will be set in /ask)
+    # youtube_search_was_performed_flag = bool(youtube_videos_found) (This will be set in /ask)
+
+    return combined_search_text_context.strip(), queries_used, final_categorized_web_urls, youtube_videos_found
 
 # --- FastAPI Events ---
 @app.on_event("startup")
@@ -540,13 +540,11 @@ async def startup_event():
         try:
             groq_llm = ChatGroq(temperature=settings.model_temperature, model_name=settings.model_name, groq_api_key=settings.groq_api_key)
             
-            # Max words for responses generated from search results (can be larger)
             max_words_for_searched_answer = settings.max_response_words + 150 
-            if max_words_for_searched_answer < 300: # Ensure at least 300
+            if max_words_for_searched_answer < 300:
                 max_words_for_searched_answer = 300
             logger.info(f"Max words for direct answers: {settings.max_response_words}")
             logger.info(f"Max words for search-based/reconciled answers: {max_words_for_searched_answer}")
-
 
             direct_prompt_template = PromptTemplate(
                 template=STRICT_PROMPT_TEMPLATE_TEXT, 
@@ -578,7 +576,7 @@ async def startup_event():
             
     if settings.enable_web_search:
         try:
-            ddg_search = DuckDuckGoSearchRun(max_results=5, safesearch="moderate", region="wt-wt")
+            ddg_search = DuckDuckGoSearchRun(max_results=5, safesearch="moderate", region="wt-wt") # Langchain's DDG tool is a wrapper, region might not be as effective as direct API.
             logger.info("SmartGenie's web search powers (DuckDuckGo) are ready!")
         except Exception as e:
             logger.error(f"Failed to initialize DuckDuckGo search: {e}", exc_info=True)
@@ -610,10 +608,14 @@ async def ask_question(request: QuestionRequest):
     final_answer: str = ANSWER_UNKNOWN
     final_source: str = SOURCE_SYSTEM
     final_confidence: str = CONFIDENCE_LOW
-    search_was_performed_flag: bool = False
+    
+    # These will be determined by what perform_search returns and subsequent logic
+    search_was_performed_flag: bool = False 
     youtube_search_was_performed_flag: bool = False
+    
     search_queries: List[str] = []
-    categorized_web_urls: Dict[str, List[str]] = {}
+    # categorized_web_urls will hold URLs from web search (DDG + Suggested)
+    categorized_web_urls: Dict[str, List[str]] = {} 
     youtube_videos_results: List[YouTubeVideo] = []
 
     try:
@@ -624,109 +626,142 @@ async def ask_question(request: QuestionRequest):
         cleaned_direct_answer = clean_response(raw_direct_response, is_from_search=False)
         logger.info(f"SmartGenie's cleaned direct answer: '{cleaned_direct_answer[:200]}...'")
 
-        is_direct_answer_unknown = cleaned_direct_answer == ANSWER_UNKNOWN # Simpler check now
+        is_direct_answer_unknown = cleaned_direct_answer == ANSWER_UNKNOWN
         
         search_needed_for_unknown = is_direct_answer_unknown
         search_needed_for_staleness_check = not is_direct_answer_unknown and is_question_potentially_stale(request.question)
         
-        should_perform_search_operation = search_needed_for_unknown or search_needed_for_staleness_check
+        should_trigger_search_logic = search_needed_for_unknown or search_needed_for_staleness_check
         
-        search_actually_possible = (settings.enable_web_search and ddg_search) or \
-                                   (request.include_youtube and settings.enable_youtube_search and settings.youtube_api_key)
+        # Check if any search type is actually enabled and configured
+        web_search_possible = settings.enable_web_search and ddg_search # ddg_search implies tool is ready
+        youtube_search_possible = request.include_youtube and settings.enable_youtube_search and settings.youtube_api_key
+        any_search_actually_possible = web_search_possible or youtube_search_possible
         
-        if should_perform_search_operation and search_actually_possible:
-            logger.info(f"Search operation initiated. Reason - Direct unknown: {search_needed_for_unknown}, Potentially stale: {search_needed_for_staleness_check}")
+        if should_trigger_search_logic and any_search_actually_possible:
+            logger.info(f"Search logic triggered. Reason - Direct unknown: {search_needed_for_unknown}, Potentially stale: {search_needed_for_staleness_check}. Web possible: {web_search_possible}, YT possible: {youtube_search_possible}")
             
-            search_context_str, search_queries_used_in_search, urls_from_search, yt_videos_from_search = await perform_search(
+            # perform_search now returns all web URLs in its 3rd output
+            search_context_str, queries_from_search, web_urls_from_search, yt_videos_from_search = await perform_search(
                 request.question, include_youtube_flag=request.include_youtube
             )
-            search_was_performed_flag = bool(search_queries_used_in_search) # If any queries were made
             
-            search_queries.extend(search_queries_used_in_search)
-            if isinstance(urls_from_search, dict):
-                 categorized_web_urls = urls_from_search
-            if yt_videos_from_search:
-                youtube_videos_results.extend(yt_videos_from_search)
-                youtube_search_was_performed_flag = True # Set if videos are found
+            search_queries.extend(queries_from_search) # Update with actual queries made
+            categorized_web_urls = web_urls_from_search # This is the final list of web URLs
+            youtube_videos_results = yt_videos_from_search # Final list of YT videos
 
-            if search_context_str.strip(): # Check if search_context_str has actual content
+            # Determine if searches were effectively performed based on their outputs
+            # Web search performed if web query was used OR web URLs were found
+            web_search_effectively_performed = (any("Web:" in q for q in search_queries)) or bool(categorized_web_urls)
+            # YouTube search performed if YT query was used OR YT videos were found
+            youtube_search_effectively_performed = (any("YouTube:" in q for q in search_queries)) or bool(youtube_videos_results)
+
+            search_was_performed_flag = web_search_effectively_performed or youtube_search_effectively_performed
+            youtube_search_was_performed_flag = youtube_search_effectively_performed # Specifically for YT videos list
+
+            if search_context_str.strip(): # If search_context_str (text for LLM) has actual content
                 if search_needed_for_staleness_check and reconciliation_llm_chain:
                     logger.info("Reconciling potentially stale direct answer with new search results...")
+                    # ... (reconciliation logic as before)
                     context_reconcile = {"current_date": current_date_str, "question": request.question, "initial_answer": cleaned_direct_answer, "search_results": search_context_str}
                     raw_reconciled_response = await reconciliation_llm_chain.arun(context_reconcile)
                     final_answer = clean_response(raw_reconciled_response, is_from_search=True)
                     logger.info(f"LLM Reconciled Cleaned: '{final_answer[:200]}...'")
                     final_source = SOURCE_GROQ_AI_RECONCILED if final_answer != ANSWER_UNKNOWN else SOURCE_GROQ_AI_WITH_SEARCH
                     final_confidence = CONFIDENCE_HIGH if final_answer != ANSWER_UNKNOWN else CONFIDENCE_LOW
-                
+
                 elif search_needed_for_unknown and search_augmented_llm_chain:
                     logger.info("Direct answer was 'Unknown'. Augmenting with search results...")
+                    # ... (augmentation logic as before)
                     context_augmented = {"current_date": current_date_str, "question": request.question, "search_results": search_context_str}
                     raw_augmented_response = await search_augmented_llm_chain.arun(context_augmented)
                     final_answer = clean_response(raw_augmented_response, is_from_search=True)
                     logger.info(f"LLM Augmented Cleaned: '{final_answer[:200]}...'")
+                    # Determine source based on what contributed
                     if final_answer != ANSWER_UNKNOWN:
-                        has_web_res = any("Web:" in q for q in search_queries) and categorized_web_urls
-                        # youtube_search_was_performed_flag is already set if yt_videos_from_search was true
-                        if has_web_res and youtube_search_was_performed_flag: final_source = SOURCE_GROQ_AI_WITH_MIXED_SEARCH
-                        elif youtube_search_was_performed_flag: final_source = SOURCE_GROQ_AI_WITH_YOUTUBE
-                        elif has_web_res: final_source = SOURCE_GROQ_AI_WITH_SEARCH
-                        else: final_source = SOURCE_GROQ_AI_WITH_SEARCH # Fallback if search context was used
-                        final_confidence = CONFIDENCE_MEDIUM if final_answer != ANSWER_UNKNOWN else CONFIDENCE_LOW
+                        # Refined source determination logic
+                        web_contributed_to_answer = web_search_effectively_performed and \
+                                                    ("Web Search Results" in search_context_str or "Suggested Web Resources" in search_context_str)
+                        youtube_contributed_to_answer = youtube_search_effectively_performed and \
+                                                        "Cool YouTube Videos Found" in search_context_str
+
+                        if web_contributed_to_answer and youtube_contributed_to_answer:
+                            final_source = SOURCE_GROQ_AI_WITH_MIXED_SEARCH
+                        elif youtube_contributed_to_answer:
+                            final_source = SOURCE_GROQ_AI_WITH_YOUTUBE
+                        elif web_contributed_to_answer:
+                            final_source = SOURCE_GROQ_AI_WITH_SEARCH
+                        else: # Fallback if search context was used but specific source unclear
+                            final_source = SOURCE_GROQ_AI_WITH_SEARCH 
+                        final_confidence = CONFIDENCE_MEDIUM
                     else: # Augmentation still led to "I don't know"
-                        final_source = SOURCE_GROQ_AI_WITH_SEARCH # Source still reflects search attempt
+                        final_source = SOURCE_GROQ_AI_WITH_SEARCH
                         final_confidence = CONFIDENCE_LOW
-                else: # Fallback if conditions not met but search context exists
-                    logger.warning("Search yielded context, but neither reconciliation nor augmentation path was fully taken. Using direct answer if available.")
+                else: 
+                    logger.warning("Search yielded text context, but conditions for specific LLM chain (reconcile/augment) not met. Using direct answer if available.")
                     final_answer = cleaned_direct_answer if not is_direct_answer_unknown else ANSWER_UNKNOWN
                     final_source = SOURCE_GROQ_AI_DIRECT if not is_direct_answer_unknown else SOURCE_SYSTEM
                     final_confidence = CONFIDENCE_HIGH if final_answer != ANSWER_UNKNOWN else CONFIDENCE_LOW
-            else: # Search operation performed but yielded no text context
-                logger.info("Search operation yielded no usable text context. Using direct answer if available.")
+            
+            else: # Search operation was triggered, but perform_search returned no text_context for LLM
+                logger.info("Search logic triggered, but perform_search yielded no usable text context for LLM. Using direct answer if available.")
                 final_answer = cleaned_direct_answer if not is_direct_answer_unknown else ANSWER_UNKNOWN
                 final_source = SOURCE_GROQ_AI_DIRECT if not is_direct_answer_unknown else SOURCE_SYSTEM
                 final_confidence = CONFIDENCE_HIGH if final_answer != ANSWER_UNKNOWN else CONFIDENCE_LOW
-        else: # No search operation performed
-            logger.info(f"No search operation performed or search tools not available. Search needed: {should_perform_search_operation}, Search possible: {search_actually_possible}")
+                # search_was_performed_flag might still be true if URLs/Videos were found, even if no text context for LLM.
+                # This means the AnswerResponse.search_performed can be true, but LLM didn't use search context.
+        
+        else: # No search logic triggered OR no search actually possible
+            logger.info(f"No search logic triggered or no search possible. Using direct answer. Trigger: {should_trigger_search_logic}, Possible: {any_search_actually_possible}")
             final_answer = cleaned_direct_answer
             final_source = SOURCE_GROQ_AI_DIRECT
             final_confidence = CONFIDENCE_HIGH if not is_direct_answer_unknown else CONFIDENCE_LOW
+            # Ensure these are false if no search path taken
             search_was_performed_flag = False
             youtube_search_was_performed_flag = False
             search_queries = []
             categorized_web_urls = {}
             youtube_videos_results = []
 
+        # Build additional_resources from whatever was found
         additional_res: Dict[str, List[str]] = {}
-        if categorized_web_urls:
+        if categorized_web_urls: # Populated by perform_search -> perform_enhanced_web_search
             if 'wikipedia' in categorized_web_urls and categorized_web_urls['wikipedia']:
-                additional_res["wikipedia_articles"] = categorized_web_urls['wikipedia']
+                additional_res["wikipedia_articles"] = list(set(categorized_web_urls['wikipedia']))
             if 'academic' in categorized_web_urls and categorized_web_urls['academic']:
-                additional_res["academic_sources"] = categorized_web_urls['academic']
+                additional_res["academic_sources"] = list(set(categorized_web_urls['academic']))
             if 'news' in categorized_web_urls and categorized_web_urls['news']:
-                additional_res["news_articles"] = categorized_web_urls['news']
+                additional_res["news_articles"] = list(set(categorized_web_urls['news']))
             if 'government' in categorized_web_urls and categorized_web_urls['government']:
-                additional_res["government_sources"] = categorized_web_urls['government']
+                additional_res["government_sources"] = list(set(categorized_web_urls['government']))
             if 'educational' in categorized_web_urls and categorized_web_urls['educational']:
-                additional_res["educational_resources"] = categorized_web_urls['educational']
+                additional_res["educational_resources"] = list(set(categorized_web_urls['educational']))
             if 'general' in categorized_web_urls and categorized_web_urls['general']:
-                additional_res["web_sources"] = categorized_web_urls['general']
+                additional_res["web_sources"] = list(set(categorized_web_urls['general']))
         
-        if youtube_videos_results: 
+        if youtube_videos_results: # Populated by perform_search -> search_youtube
             additional_res["youtube_videos_urls"] = [video.url for video in youtube_videos_results]
         
         legacy_web_urls = get_legacy_urls_list(categorized_web_urls) if categorized_web_urls else []
         
-        # Final check if answer is still unknown despite search attempts
+        # Override source if final answer is UNKNOWN despite search attempts.
         if final_answer == ANSWER_UNKNOWN and search_was_performed_flag:
-            logger.info(f"Final answer is UNKNOWN despite search. Question: '{request.question}'")
-            # Source should reflect that search was attempted.
-            # Confidence is already low.
+            logger.info(f"Final answer is UNKNOWN despite search attempt(s). Question: '{request.question}'")
+            # Determine a more accurate source based on what was attempted
+            if web_search_effectively_performed and youtube_search_effectively_performed:
+                final_source = SOURCE_GROQ_AI_WITH_MIXED_SEARCH
+            elif youtube_search_effectively_performed:
+                 final_source = SOURCE_GROQ_AI_WITH_YOUTUBE
+            elif web_search_effectively_performed:
+                 final_source = SOURCE_GROQ_AI_WITH_SEARCH
+            # else, it might have been direct unknown and search wasn't possible or yielded nothing,
+            # in which case source would be system or direct.
+            final_confidence = CONFIDENCE_LOW # Already set but good to be explicit
 
         return AnswerResponse(
             answer=final_answer, source=final_source, confidence=final_confidence,
-            search_performed=search_was_performed_flag,
-            youtube_search_performed=youtube_search_was_performed_flag,
+            search_performed=search_was_performed_flag, # Overall search attempt
+            youtube_search_performed=youtube_search_was_performed_flag, # Specifically if YT videos are in response
             search_queries_used=search_queries if search_queries else None,
             source_urls=legacy_web_urls if legacy_web_urls else None,
             youtube_videos=youtube_videos_results if youtube_videos_results else None,
@@ -754,9 +789,9 @@ async def health_check():
     overall_status = "healthy"
     if not is_llm_healthy: 
         overall_status = "degraded (LLM issue)"
-    if settings.enable_web_search and not ddg_search:
+    if settings.enable_web_search and not ddg_search: # Web search enabled but tool failed
         overall_status = "degraded (Web Search Tool issue)"
-    if settings.enable_youtube_search and not settings.youtube_api_key:
+    if settings.enable_youtube_search and not settings.youtube_api_key: # YouTube search enabled but key missing
         if overall_status == "healthy": overall_status = "degraded (YouTube API Key missing)"
         else: overall_status += " & YouTube API Key missing"
 

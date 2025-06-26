@@ -1,7 +1,7 @@
 # 🧠 SmartGeni - AI-Powered Knowledge Assistant
 
 <p align="center">
-  <img src="./public/engaging-ai-logo-design-reflecting-power-smart-solutions_1222399-80441.avif" alt="SmartGeni Logo" width="200"/>
+  <img src="./frontend/public/engaging-ai-logo-design-reflecting-power-smart-solutions_1222399-80441.avif" alt="SmartGeni Logo" width="200"/>
 </p>
 
 <p align="center">
@@ -285,6 +285,26 @@ Check the health status of all services.
    CMD ["npm", "run", "preview"]
    ```
 
+3. **Create docker-compose.yml**
+   ```yaml
+   version: '3.8'
+   services:
+     backend:
+       build: ./backend
+       ports:
+         - "8000:8000"
+       environment:
+         - GROQ_API_KEY=${GROQ_API_KEY}
+         - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+     
+     frontend:
+       build: ./frontend
+       ports:
+         - "8080:8080"
+       depends_on:
+         - backend
+   ```
+
 ### Option 2: Traditional Deployment
 
 **Backend (Python/FastAPI):**
@@ -326,6 +346,72 @@ Check the health status of all services.
 - Write meaningful commit messages
 - Add tests for new features
 - Update documentation as needed
+
+## 📊 System Flow Chart
+
+```mermaid
+flowchart TD
+    A[User Input] --> B{Question Type?}
+    
+    B -->|Direct Query| C[Direct LLM Processing]
+    B -->|Search Required| D[Search Decision]
+    
+    D --> E{Search Type?}
+    E -->|Web Search| F[DuckDuckGo Search]
+    E -->|YouTube Search| G[YouTube API Search]
+    E -->|Both| H[Parallel Search]
+    
+    F --> I[Web Results Processing]
+    G --> J[Video Results Processing]
+    H --> I
+    H --> J
+    
+    I --> K[Results Aggregation]
+    J --> K
+    C --> K
+    
+    K --> L[LLM Final Processing]
+    L --> M[Response Generation]
+    M --> N[User Response]
+    
+    style A fill:#e1f5fe
+    style N fill:#e8f5e8
+    style L fill:#fff3e0
+    style F fill:#f3e5f5
+    style G fill:#ffebee
+```
+
+## 🔍 Search Logic Flow
+
+```mermaid
+stateDiagram-v2
+    [*] --> QuestionReceived
+    QuestionReceived --> DirectAnswer: Try Direct Response
+    DirectAnswer --> CheckIfUnknown: Evaluate Response
+    
+    CheckIfUnknown --> SearchRequired: Unknown/Stale
+    CheckIfUnknown --> FinalResponse: Known & Current
+    
+    SearchRequired --> WebSearch: Web Enabled
+    SearchRequired --> YouTubeSearch: YouTube Enabled
+    SearchRequired --> BothSearches: Both Enabled
+    
+    WebSearch --> ProcessWebResults
+    YouTubeSearch --> ProcessVideoResults
+    BothSearches --> ProcessWebResults
+    BothSearches --> ProcessVideoResults
+    
+    ProcessWebResults --> CombineResults
+    ProcessVideoResults --> CombineResults
+    
+    CombineResults --> LLMWithContext: Has Results
+    CombineResults --> FallbackResponse: No Results
+    
+    LLMWithContext --> FinalResponse
+    FallbackResponse --> FinalResponse
+    
+    FinalResponse --> [*]
+```
 
 ## 📝 License
 

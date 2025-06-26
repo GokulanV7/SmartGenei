@@ -100,15 +100,11 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      // Get the current origin and construct the redirect URL
-      const redirectTo = window.location.origin === 'http://localhost:3000' 
-        ? `https://smart-genei.vercel.app/chat`
-        : `${window.location.origin}/chat`;
-        
+      // Always redirect to production domain for consistency
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectTo
+          redirectTo: 'https://smart-genei.vercel.app/chat'
         }
       });
 
