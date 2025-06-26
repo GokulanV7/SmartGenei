@@ -21,6 +21,7 @@ const Chat = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isPremiumPopupOpen, setIsPremiumPopupOpen] = useState(false);
+  const [isMaintenancePopupOpen, setIsMaintenancePopupOpen] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [recentChats, setRecentChats] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -393,6 +394,15 @@ const Chat = () => {
     fileInputRef.current?.click();
   };
 
+  const handleUpgradeClick = () => {
+    setIsMaintenancePopupOpen(true);
+  };
+
+  const handleBasicClick = () => {
+    setIsPremiumPopupOpen(false);
+    navigate('/chat');
+  };
+
   const SourceCard = ({ source, index }) => {
     const isYouTube = isYouTubeUrl(source.url);
     const youTubeId = isYouTube ? extractYouTubeId(source.url) : null;
@@ -547,7 +557,10 @@ const Chat = () => {
                 className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-violet-600 flex items-center justify-center font-bold shadow-lg hover:shadow-purple-500/30 hover:scale-110 transition-all duration-300 text-white"
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
               >
-                {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || 
+                 user?.user_metadata?.name?.charAt(0).toUpperCase() || 
+                 profile?.full_name?.charAt(0).toUpperCase() || 
+                 user?.email?.charAt(0).toUpperCase() || 'U'}
               </button>
               {!usage?.is_premium && (
                 <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
@@ -734,11 +747,9 @@ const Chat = () => {
                       </div>
                       <p className="font-light text-gray-600 text-xs">Limited to 3 messages</p>
                     </div>
-                    <Link to="/premium" className="block mt-4 w-full">
-                      <button className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-lg p-2 text-xs font-semibold shadow-lg shadow-gray-500/30 hover:shadow-gray-500/50 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/20">
-                        Upgrade Now
-                      </button>
-                    </Link>
+                    <button onClick={handleBasicClick} className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-lg p-2 text-xs font-semibold shadow-lg shadow-gray-500/30 hover:shadow-gray-500/50 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/20">
+                      Continue with Basic
+                    </button>
                     <div className="p-0 mt-6 space-y-2 text-left text-gray-700 text-xs">
                       <ul className="space-y-2">
                         <li className="flex items-center space-x-2">
@@ -770,11 +781,9 @@ const Chat = () => {
                       </div>
                       <p className="font-light text-gray-700 text-xs">Balanced features for regular users</p>
                     </div>
-                    <Link to="/premium" className="block mt-4 w-full">
-                      <button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg p-2 text-xs font-semibold shadow-lg shadow-green-500/40 hover:shadow-green-500/60 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30">
-                        Upgrade Now
-                      </button>
-                    </Link>
+                    <button onClick={handleUpgradeClick} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg p-2 text-xs font-semibold shadow-lg shadow-green-500/40 hover:shadow-green-500/60 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30">
+                      Upgrade Now
+                    </button>
                     <div className="p-0 mt-6 space-y-2 text-left text-gray-800 text-xs">
                       <ul className="space-y-2">
                         <li className="flex items-center space-x-2">
@@ -810,11 +819,9 @@ const Chat = () => {
                       </div>
                       <p className="font-light text-gray-700 text-xs">Tailored solutions for businesses</p>
                     </div>
-                    <Link to="/premium" className="block mt-4 w-full">
-                      <button className="w-full bg-gradient-to-r from-purple-700 to-indigo-700 text-white rounded-lg p-2 text-xs font-semibold shadow-lg shadow-purple-600/50 hover:shadow-purple-600/70 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30">
-                        Contact Us
-                      </button>
-                    </Link>
+                    <button onClick={handleUpgradeClick} className="w-full bg-gradient-to-r from-purple-700 to-indigo-700 text-white rounded-lg p-2 text-xs font-semibold shadow-lg shadow-purple-600/50 hover:shadow-purple-600/70 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30">
+                      Contact Us
+                    </button>
                     <div className="p-0 mt-6 space-y-2 text-left text-gray-800 text-xs">
                       <ul className="space-y-2">
                         <li className="flex items-center space-x-2">
@@ -841,6 +848,38 @@ const Chat = () => {
               <div className="p-4 bg-gray-50 flex justify-end border-t border-gray-200">
                 <button onClick={() => setIsPremiumPopupOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Under Maintenance Popup */}
+      {isMaintenancePopupOpen && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center"
+            onClick={() => setIsMaintenancePopupOpen(false)}
+          />
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+              <div className="p-6 bg-gradient-to-r from-orange-500 to-red-500 text-white text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold mb-2">Under Maintenance</h2>
+                <p className="text-white/90 text-sm">Payment system is currently under maintenance. Please try again later.</p>
+              </div>
+              <div className="p-6 text-center">
+                <p className="text-gray-600 mb-4">We're working hard to bring you the best payment experience. Thank you for your patience!</p>
+                <button 
+                  onClick={() => setIsMaintenancePopupOpen(false)}
+                  className="px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 font-medium"
+                >
+                  Got it
                 </button>
               </div>
             </div>

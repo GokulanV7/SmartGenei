@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Crown, Check, ArrowLeft, Zap, MessageCircle, Upload, History, HeadphonesIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useParallax } from "@/hooks/useParallax";
@@ -10,7 +10,9 @@ import "@/styles/landing.css";
 
 const Premium = () => {
   const [mounted, setMounted] = useState(false);
+  const [isMaintenancePopupOpen, setIsMaintenancePopupOpen] = useState(false);
   const { usage, loading } = useUserUsage();
+  const navigate = useNavigate();
   
   // Parallax effects
   const heroParallax = useParallax({ speed: 0.08, reverse: true });
@@ -23,8 +25,15 @@ const Premium = () => {
   }, []);
   
   const handleUpgrade = () => {
-    // This would integrate with a payment processor like Stripe
-    alert('Premium upgrade would be handled by a payment processor like Stripe');
+    setIsMaintenancePopupOpen(true);
+  };
+
+  const handleFreeClick = () => {
+    navigate('/chat');
+  };
+
+  const handleContactClick = () => {
+    setIsMaintenancePopupOpen(true);
   };
 
   return (
@@ -104,11 +113,9 @@ const Premium = () => {
                       Limited to 3 messages
                     </CardDescription>
                   </CardHeader>
-                  <Link to="/auth" className="block mt-6 w-full">
-                    <Button className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-xl p-3 text-sm font-semibold shadow-lg shadow-gray-500/30 hover:shadow-gray-500/50 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/20">
-                      Get Started
-                    </Button>
-                  </Link>
+                  <Button onClick={handleFreeClick} className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-xl p-3 text-sm font-semibold shadow-lg shadow-gray-500/30 hover:shadow-gray-500/50 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/20 mt-6">
+                    Get Started
+                  </Button>
                   <CardContent className="p-0 mt-8 space-y-4 text-left text-gray-700 text-sm">
                     <ul className="space-y-4">
                       <li className="flex items-center space-x-3">
@@ -143,11 +150,9 @@ const Premium = () => {
                       Balanced features for regular users
                     </CardDescription>
                   </CardHeader>
-                  <Link to="/auth" className="block mt-6 w-full">
-                    <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl p-3 text-sm font-semibold shadow-lg shadow-green-500/40 hover:shadow-green-500/60 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30">
-                      Get Started
-                    </Button>
-                  </Link>
+                  <Button onClick={handleUpgrade} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl p-3 text-sm font-semibold shadow-lg shadow-green-500/40 hover:shadow-green-500/60 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30 mt-6">
+                    Upgrade Now
+                  </Button>
                   <CardContent className="p-0 mt-8 space-y-4 text-left text-gray-800 text-sm">
                     <ul className="space-y-4">
                       <li className="flex items-center space-x-3">
@@ -186,11 +191,9 @@ const Premium = () => {
                       Tailored solutions for businesses
                     </CardDescription>
                   </CardHeader>
-                  <Link to="/auth" className="block mt-6 w-full">
-                    <Button className="w-full bg-gradient-to-r from-purple-700 to-indigo-700 text-white rounded-xl p-3 text-sm font-semibold shadow-lg shadow-purple-600/50 hover:shadow-purple-600/70 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30">
-                      Contact Us
-                    </Button>
-                  </Link>
+                  <Button onClick={handleContactClick} className="w-full bg-gradient-to-r from-purple-700 to-indigo-700 text-white rounded-xl p-3 text-sm font-semibold shadow-lg shadow-purple-600/50 hover:shadow-purple-600/70 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm border border-white/30 mt-6">
+                    Contact Us
+                  </Button>
                   <CardContent className="p-0 mt-8 space-y-4 text-left text-gray-800 text-sm">
                     <ul className="space-y-4">
                       <li className="flex items-center space-x-3">
@@ -240,6 +243,38 @@ const Premium = () => {
           </div>
         </div>
       </div>
+
+      {/* Under Maintenance Popup */}
+      {isMaintenancePopupOpen && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center"
+            onClick={() => setIsMaintenancePopupOpen(false)}
+          />
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+              <div className="p-6 bg-gradient-to-r from-orange-500 to-red-500 text-white text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold mb-2">Under Maintenance</h2>
+                <p className="text-white/90 text-sm">Payment system is currently under maintenance. Please try again later.</p>
+              </div>
+              <div className="p-6 text-center">
+                <p className="text-gray-600 mb-4">We're working hard to bring you the best payment experience. Thank you for your patience!</p>
+                <button 
+                  onClick={() => setIsMaintenancePopupOpen(false)}
+                  className="px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:shadow-lg hover:shadow-orange-500/30 transition-all duration-300 font-medium"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
